@@ -7,6 +7,7 @@ Language Features:
 
 Compiler Features:
  * Type Checker: Give better error messages for some literal conversions
+ * Standard-Json: Support "Yul" as input language.
  * Peephole Optimizer: Remove double ``iszero`` before ``jumpi``.
  * SMTChecker: Support enums without typecast.
  * SMTChecker: Support one-dimensional arrays.
