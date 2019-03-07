@@ -1220,10 +1220,7 @@ public:
 	{
 		return std::make_shared<IntegerType>(256);
 	}
-	TypePointer interfaceType(bool _inLibrary) const override
-	{
-		return _inLibrary ? shared_from_this() : TypePointer();
-	}
+	TypePointer interfaceType(bool _inLibrary) const override;
 	bool dataStoredIn(DataLocation _location) const override { return _location == DataLocation::Storage; }
 	/// Cannot be stored in memory, but just in case.
 	bool hasSimpleZeroValueInMemory() const override { solAssert(false, ""); }

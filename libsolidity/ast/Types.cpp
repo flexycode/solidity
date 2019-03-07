@@ -1872,14 +1872,15 @@ TypePointer ArrayType::decodingType() const
 TypePointer ArrayType::interfaceType(bool _inLibrary) const
 {
 	// Note: This has to fulfill canBeUsedExternally(_inLibrary) ==  !!interfaceType(_inLibrary)
+	TypePointer baseExt = m_baseType->interfaceType(_inLibrary);
+	if (!baseExt)
+		return TypePointer();
+
 	if (_inLibrary && location() == DataLocation::Storage)
 		return shared_from_this();
 
 	if (m_arrayKind != ArrayKind::Ordinary)
 		return this->copyForLocation(DataLocation::Memory, true);
-	TypePointer baseExt = m_baseType->interfaceType(_inLibrary);
-	if (!baseExt)
-		return TypePointer();
 
 	if (isDynamicallySized())
 		return make_shared<ArrayType>(DataLocation::Memory, baseExt);
@@ -1890,12 +1891,12 @@ TypePointer ArrayType::interfaceType(bool _inLibrary) const
 bool ArrayType::canBeUsedExternally(bool _inLibrary) const
 {
 	// Note: This has to fulfill canBeUsedExternally(_inLibrary) ==  !!interfaceType(_inLibrary)
+	if (!m_baseType->canBeUsedExternally(_inLibrary))
+		return false;
 	if (_inLibrary && location() == DataLocation::Storage)
 		return true;
 	else if (m_arrayKind != ArrayKind::Ordinary)
 		return true;
-	else if (!m_baseType->canBeUsedExternally(_inLibrary))
-		return false;
 	else
 		return true;
 }
@@ -2146,17 +2147,12 @@ TypePointer StructType::interfaceType(bool _inLibrary) const
 
 bool StructType::canBeUsedExternally(bool _inLibrary) const
 {
-	if (_inLibrary && location() == DataLocation::Storage)
-		return true;
-	else if (recursive())
+	if (recursive())
 		return false;
 	else
 	{
 		// Check that all members have interface types.
-		// We pass "false" to canBeUsedExternally (_inLibrary), because this struct will be
-		// passed by value and thus the encoding does not differ, but it will disallow
-		// mappings.
-		// Also return false if at least one struct member does not have a type.
+		// return false if at least one struct member does not have a type.
 		// This might happen, for example, if the type of the member does not exist,
 		// which is reported as an error.
 		for (auto const& var: m_struct.members())
@@ -2165,7 +2161,7 @@ bool StructType::canBeUsedExternally(bool _inLibrary) const
 			// A TypeError is expected in this case.
 			if (!var->annotation().type)
 				return false;
-			if (!var->annotation().type->canBeUsedExternally(false))
+			if (!var->annotation().type->canBeUsedExternally(_inLibrary))
 				return false;
 		}
 	}
@@ -3234,6 +3230,18 @@ string MappingType::toString(bool _short) const
 string MappingType::canonicalName() const
 {
 	return "mapping(" + keyType()->canonicalName() + " => " + valueType()->canonicalName() + ")";
+}
+
+TypePointer MappingType::interfaceType(bool _inLibrary) const
+{
+	if (
+		!_inLibrary ||
+		!keyType()->canBeUsedExternally(_inLibrary) ||
+		!valueType()->canBeUsedExternally(_inLibrary)
+	)
+		return TypePointer();
+
+	return shared_from_this();
 }
 
 string TypeType::richIdentifier() const

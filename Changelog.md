@@ -18,6 +18,7 @@ Compiler Features:
 Bugfixes:
  * JSON ABI: Json description of library ABIs no longer contain functions with internal types like storage structs.
  * SMTChecker: Fix internal compiler error when contract contains too large rational number.
+ * Type system: Detect and disallow internal function pointers as parameters for public/external library functions, even when they are nested/wrapped in structs, arrays or other types.
  * Type system: Detect if a contract's base uses types that require the experimental abi encoder while the contract still uses the old encoder
  * Yul Optimizer: Fix visitation order bug for the structural simplifier.
 
