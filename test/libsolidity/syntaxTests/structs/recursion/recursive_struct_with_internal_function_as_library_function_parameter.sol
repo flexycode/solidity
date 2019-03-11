@@ -8,4 +8,4 @@ library Test {
     function f(MyStructName storage s) public {}
 }
 // ----
-// TypeError: (142-164): Internal or recursive type is not allowed for public or external functions.
+// TypeError: (142-164): Internal type is not allowed for public or external library functions.

@@ -2147,25 +2147,55 @@ TypePointer StructType::interfaceType(bool _inLibrary) const
 
 bool StructType::canBeUsedExternally(bool _inLibrary) const
 {
-	if (recursive())
-		return false;
-	else
+	bool result = true;
+
+	auto visitor = [&](
+		StructDefinition const& _struct,
+		CycleDetector<StructDefinition>& _cycleDetector,
+		size_t /*_depth*/
+	)
 	{
 		// Check that all members have interface types.
-		// return false if at least one struct member does not have a type.
+		// Return false if at least one struct member does not have a type.
 		// This might happen, for example, if the type of the member does not exist,
 		// which is reported as an error.
-		for (auto const& var: m_struct.members())
+		for (ASTPointer<VariableDeclaration> const& variable: _struct.members())
 		{
 			// If the struct member does not have a type return false.
 			// A TypeError is expected in this case.
-			if (!var->annotation().type)
-				return false;
-			if (!var->annotation().type->canBeUsedExternally(_inLibrary))
-				return false;
+			if (!variable->annotation().type)
+			{
+				result = false;
+				return;
+			}
+
+			Type const* memberType = variable->annotation().type.get();
+
+			while (dynamic_cast<ArrayType const*>(memberType))
+				memberType = dynamic_cast<ArrayType const*>(memberType)->baseType().get();
+
+			if (StructType const* innerStruct = dynamic_cast<StructType const*>(memberType))
+				if (_cycleDetector.run(innerStruct->structDefinition()))
+				{
+					if (_inLibrary)
+						continue;
+					else
+					{
+						result = false;
+						return;
+					}
+				}
+
+			if (!memberType->canBeUsedExternally(_inLibrary))
+			{
+				result = false;
+				return;
+			}
 		}
-	}
-	return true;
+	};
+
+	CycleDetector<StructDefinition>(visitor).run(structDefinition());
+	return result;
 }
 
 TypePointer StructType::copyForLocation(DataLocation _location, bool _isPointer) const
